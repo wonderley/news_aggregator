@@ -4,6 +4,7 @@ import pdb
 import pickle
 import pandas as pd
 import numpy as np
+import json
 
 stemmer = nltk.stem.porter.PorterStemmer()
 stop_words = set(nltk.corpus.stopwords.words('english'))
@@ -57,6 +58,18 @@ def cache_for_analysis(url, title, stems, feed_id):
 def dump_articles():
     pickle.dump(articles, open("articles.pickle", "wb"))
 
+def article_to_json(row, all_terms):
+    stems = row[3]
+    vec = [("1" if term in stems else "0") for term in all_terms]
+    vec_string = "".join(vec)
+    return {
+        "article_id": row[0],
+        "url": row[1],
+        "title": row[2],
+        "feed_id": row[4],
+        "vec": vec_string
+    }
+
 def analyze_articles():
     seen_stems = set()
     # do some kind of clustering with tf/idf!
@@ -66,25 +79,10 @@ def analyze_articles():
         stems = row[3]
         for stem in stems:
             seen_stems.add(stem)
-    df_terms = pd.DataFrame({"terms": list(seen_stems)})
+    all_terms = list(seen_stems)
     for row in articles:
-        stems = row[3]
-        # TODO: sort stems
-        cur_article_id = row[0]
-        col_name = "a" + str(cur_article_id)
-        col = [(1 if term in stems else 0) for term in df_terms.terms]
-        df_terms[col_name] = col
-    # Information about articles
-    df_articles = pd.DataFrame(index=np.arange(0, len(articles)),
-                               columns=("article_id", "url", "title", "feed_id"))
-    # Fill it up row by row
-    for ix, article in enumerate(articles):
-        # Convert the tuple to a list and exclude the terms
-        as_list = [article[0], article[1], article[2], article[4]]
-        nparr = np.array(as_list, dtype=object)
-        df_articles.iloc[ix] = nparr
-    pickle.dump(df_terms, open("df_terms.pickle", "wb"))
-    pickle.dump(df_articles, open("df_articles.pickle", "wb"))
+        json_article = article_to_json(row, all_terms)
+        print(json.dumps(json_article))
 
 if __name__ == "__main__":
     articles = pickle.load(open("articles.pickle", "rb"))
