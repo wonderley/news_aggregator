@@ -3,7 +3,7 @@ feeds = [
     ('http://feeds.washingtonpost.com/rss/politics', 'wpost'),
     ('http://feeds.feedburner.com/breitbart', 'breitbart'),
     ('http://www.huffingtonpost.com/feeds/verticals/politics/index.xml', 'huffpo'),
-    ('http://rssfeeds.usatoday.com/UsatodaycomWashington-TopStories', 'usatoday'),
+#    ('http://rssfeeds.usatoday.com/UsatodaycomWashington-TopStories', 'usatoday'),
     ('http://rss.nbcnews.com/', 'nbcnews'),
     ('http://feeds.abcnews.com/abcnews/politicsheadlines', 'abcnews'),
     ('http://www.wsj.com/xml/rss/3_7085.xml', 'wsj'),
@@ -19,8 +19,11 @@ import urllib
 from bs4 import BeautifulSoup
 from http.cookiejar import CookieJar
 import preprocess
+import group_articles
+import pickle
 
 def fetch_links():
+    articles = []
     for feed in feeds:
         url = feed[0]
         feed_id = feed[1]
@@ -30,9 +33,9 @@ def fetch_links():
             continue
         for entry in d.entries:
             link = entry.link
-            fetch_and_parse(link, feed_id)
-    preprocess.dump_articles()
-    preprocess.analyze_articles()
+            articles.append(fetch_and_parse(link, feed_id))
+    pickle.dump(articles, open("articles.pickle", "wb"))
+    group_articles.group(articles)
 
 def fetch_and_parse(link, feed_id):
     print("Fetching link: " + link)
@@ -58,8 +61,11 @@ def fetch_and_parse(link, feed_id):
     print(text)
     print('title: ' + title)
     print('text length: ' + str(len(text)))
-    stems = preprocess.tokenize(text)
-    preprocess.cache_for_analysis(link, title, stems, feed_id)
+    #stems = preprocess.tokenize(text)
+    #preprocess.cache_for_analysis(link, title, stems, feed_id)
+    # In contrast with the last approach, cache the articles here
+    # and pass them to analysis afterwards.
+    return (title, text)
 
 # Return the article's text, given a BeautifulSoup object of the page.
 def parse_article(soup):
